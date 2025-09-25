@@ -1,0 +1,52 @@
+services:
+  # Backend API service for development
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: book-catalog-backend-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/books.db
+      - PYTHONPATH=/app
+    volumes:
+      # Mount source code for live reloading
+      - ./backend/app:/app/app
+      - backend_dev_data:/app/data
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+    networks:
+      - book-catalog-dev-network
+
+  # Frontend service for development
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: book-catalog-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - API_BASE_URL=http://backend-dev:8000
+      - NODE_ENV=development
+    volumes:
+      # Mount source code for live reloading
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend-dev
+    restart: unless-stopped
+    networks:
+      - book-catalog-dev-network
+
+# Named volumes for development data persistence
+volumes:
+  backend_dev_data:
+    driver: local
+
+# Custom network for development service communication
+networks:
+  book-catalog-dev-network:
+    driver: bridge
